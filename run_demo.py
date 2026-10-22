@@ -16,7 +16,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from causal.data import make_campaign_data
-from causal.impact import estimate_impact, placebo_test
+from causal.impact import control_sensitivity, estimate_impact, placebo_test
 
 ROOT = Path(__file__).parent
 (ROOT / "images").mkdir(exist_ok=True)
@@ -78,6 +78,28 @@ def main():
     ax.legend(frameon=False, fontsize=8)
     fig.tight_layout()
     fig.savefig(ROOT / "images" / "placebo.png")
+    plt.close(fig)
+
+    spill = make_campaign_data(spillover={4: 0.6})
+    sens = control_sensitivity(spill.df, "test", spill.controls, spill.campaign_start, spill.campaign_end)
+    fig, ax = plt.subplots(figsize=(6.5, 3))
+    ypos = np.arange(len(sens))
+    ax.errorbar(
+        sens["relative_lift"] * 100, ypos,
+        xerr=[(sens["relative_lift"] - sens["lower"]) * 100, (sens["upper"] - sens["relative_lift"]) * 100],
+        fmt="o", color=BLUE, capsize=3,
+    )
+    true_rel_spill = float(spill.true_effect[start:end].sum()) / (
+        spill.df.set_index("date").loc[start:end, "test"].sum() - float(spill.true_effect[start:end].sum())
+    )
+    ax.axvline(true_rel_spill * 100, color=ORANGE, lw=1.5, label="True lift")
+    ax.set_yticks(ypos, sens.index)
+    ax.invert_yaxis()
+    ax.set_xlabel("Estimated lift (%)")
+    ax.set_title("Leave-one-out check with spillover into control 4", loc="left")
+    ax.legend(frameon=False, fontsize=8)
+    fig.tight_layout()
+    fig.savefig(ROOT / "images" / "spillover.png")
     plt.close(fig)
 
     true_cum = float(data.true_effect[start:end].sum())
