@@ -1,5 +1,7 @@
 # Did the campaign work?
 
+[![CI](https://github.com/filizrabia/campaign-causal-impact/actions/workflows/ci.yml/badge.svg)](https://github.com/filizrabia/campaign-causal-impact/actions/workflows/ci.yml) ![Python](https://img.shields.io/badge/python-3.10%E2%80%933.12-3776AB) ![License](https://img.shields.io/badge/license-MIT-lightgrey)
+
 Measuring the incremental effect of a regional marketing campaign with a synthetic control: build a counterfactual for the test region from regions that did not get the campaign, compare, and stress-test the result.
 
 The data is synthetic with a known true lift, so every estimate can be checked against the truth.
