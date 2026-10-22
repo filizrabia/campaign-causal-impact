@@ -1,7 +1,7 @@
 import unittest
 
 from causal.data import make_campaign_data
-from causal.impact import estimate_impact, placebo_test
+from causal.impact import control_sensitivity, estimate_impact, placebo_test
 
 
 class ImpactTests(unittest.TestCase):
@@ -31,6 +31,12 @@ class ImpactTests(unittest.TestCase):
         d = make_campaign_data()
         r = estimate_impact(d.df, "test", d.controls, d.campaign_start, d.campaign_end, n_boot=10)
         self.assertTrue((r.weights >= 0).all())
+
+    def test_sensitivity_flags_contaminated_control(self):
+        d = make_campaign_data(spillover={4: 0.6})
+        sens = control_sensitivity(d.df, "test", d.controls, d.campaign_start, d.campaign_end)
+        shift = (sens["relative_lift"] - sens.loc["all controls", "relative_lift"]).abs()
+        self.assertEqual(shift.idxmax(), "without control_4")
 
 
 if __name__ == "__main__":

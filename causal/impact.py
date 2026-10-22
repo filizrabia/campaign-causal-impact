@@ -124,6 +124,34 @@ def estimate_impact(
     )
 
 
+def control_sensitivity(
+    df: pd.DataFrame,
+    test: str,
+    controls: list[str],
+    start: pd.Timestamp,
+    end: pd.Timestamp,
+) -> pd.DataFrame:
+    """Re-run the analysis leaving out one control region at a time.
+
+    If the estimate depends heavily on a single control, the conclusion is
+    fragile: that region may have had its own shock, or be affected by the
+    campaign itself.
+    """
+    rows = [("all controls", estimate_impact(df, test, controls, start, end, n_boot=200))]
+    for c in controls:
+        rest = [x for x in controls if x != c]
+        rows.append((f"without {c}", estimate_impact(df, test, rest, start, end, n_boot=200)))
+    return pd.DataFrame(
+        {
+            "relative_lift": [r.relative_lift for _, r in rows],
+            "lower": [r.relative_interval[0] for _, r in rows],
+            "upper": [r.relative_interval[1] for _, r in rows],
+            "pre_period_mape": [r.pre_period_mape for _, r in rows],
+        },
+        index=[name for name, _ in rows],
+    )
+
+
 def placebo_test(
     df: pd.DataFrame,
     test: str,

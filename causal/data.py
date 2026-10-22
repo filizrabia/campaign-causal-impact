@@ -32,8 +32,16 @@ def make_campaign_data(
     campaign_day: int = 280,
     campaign_days: int = 42,
     lift: float = 0.08,
+    spillover: dict[int, float] | None = None,
     seed: int = 11,
 ) -> CampaignData:
+    """Generate the test region and controls.
+
+    spillover: optional ``{control_number: share}``; that control region also
+    gets ``share`` of the campaign's relative lift, e.g. because national media
+    or online targeting reached it too. Useful for showing how contamination
+    biases the estimate.
+    """
     rng = np.random.default_rng(seed)
     dates = pd.date_range("2025-01-01", periods=n_days, freq="D")
     t = np.arange(n_days)
@@ -55,12 +63,15 @@ def make_campaign_data(
         df[f"control_{i}"] = (8_000 * w * (common + own)).round(1)
 
     base_test = 10_000 * (common + rng.normal(0, 0.025, n_days))
-    # The campaign ramps up over the first week and keeps a small tail after it ends.
+    # The campaign effect ramps up over the first week, then holds until the campaign ends.
     effect = np.zeros(n_days)
     end = campaign_day + campaign_days
     ramp = np.minimum(1.0, (t[campaign_day:end] - campaign_day + 1) / 7)
     effect[campaign_day:end] = lift * 10_000 * common[campaign_day:end] * ramp
     df["test"] = (base_test + effect).round(1)
+    for i, share in (spillover or {}).items():
+        col = f"control_{i}"
+        df[col] = (df[col] * (1 + share * effect / (10_000 * common))).round(1)
 
     df = df[["date", "test"] + [f"control_{i}" for i in range(1, n_controls + 1)]]
     return CampaignData(
